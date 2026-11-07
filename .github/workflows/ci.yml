@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PURPLESYNC_DEMO_MODE: "true"
+      TINYFISH_API_KEY: ${{ secrets.TINYFISH_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Format check
+        run: black --check .
+      - name: Lint
+        run: flake8 purplesync app.py tests --max-line-length=120 --extend-ignore=E203,W503
+      - name: Security lint
+        run: bandit -q -r purplesync app.py
+      - name: Tests
+        run: pytest
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: python
+      - uses: github/codeql-action/analyze@v3
